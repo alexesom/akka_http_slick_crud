@@ -3,13 +3,16 @@ package services
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, onSuccess}
 import akka.http.scaladsl.server.Route
+import akka.stream.alpakka.slick.scaladsl.SlickSession
 import models.UserGroup
 import models.jsonSupport.{UserGroupJsonProtocol, UserJsonProtocol}
 import repositories.UserGroupRepository
-import routes.implicits.RoutesImplicits
+import routes.implicits.ActorsImplicits
+import slick.jdbc.JdbcBackend.Database
 
-trait UserGroupService extends UserGroupRepository with UserGroupJsonProtocol with RoutesImplicits {
-  def getUserGroupByIdRoute(id: Long): Route = {
+trait UserGroupService extends UserGroupRepository with UserGroupJsonProtocol with ActorsImplicits {
+  def getUserGroupByIdRoute(id: Long)
+                           (implicit db: Database, session: SlickSession): Route = {
     onSuccess(getUserGroupId(id)) { resultUserGroup =>
       complete(
         HttpEntity(
@@ -23,18 +26,14 @@ trait UserGroupService extends UserGroupRepository with UserGroupJsonProtocol wi
     }
   }
 
-  protected def getUserGroupPageRoute(page: Int, pageSize: Int): Route = {
-    onSuccess(getUserGroupPage(page, pageSize)) { page =>
-      complete(HttpEntity(ContentTypes.`text/html(UTF-8)`,
-        page
-          .map(userGroup => s"<h3>$userGroup</h3>")
-          .mkString("")
-      )
-      )
-    }
+  protected def getUserGroupPageRoute(page: Int, pageSize: Int)
+                                     (implicit db: Database, session: SlickSession): Route = {
+    complete(
+      getUserGroupPage(page, pageSize)
+    )
   }
 
-  protected def getUserGroupInsertRoute: Route = {
+  protected def getUserGroupInsertRoute(implicit db: Database, session: SlickSession): Route = {
     entity(as[UserGroup]) { userGroup =>
       onSuccess(insertUser(userGroup)) { responseId =>
         complete(
@@ -47,7 +46,7 @@ trait UserGroupService extends UserGroupRepository with UserGroupJsonProtocol wi
     }
   }
 
-  protected def getUserGroupPutRoute(id: Long): Route = {
+  protected def getUserGroupPutRoute(id: Long)(implicit db: Database, session: SlickSession): Route = {
     entity(as[UserGroup]) { userGroup =>
       if (userGroup.id != id) {
         complete(StatusCode.int2StatusCode(400))
@@ -63,7 +62,8 @@ trait UserGroupService extends UserGroupRepository with UserGroupJsonProtocol wi
     }
   }
 
-  protected def getUserGroupUpdateRoute(id: Long): Route = {
+  protected def getUserGroupUpdateRoute(id: Long)
+                                       (implicit db: Database, session: SlickSession): Route = {
     entity(as[UserGroup]) { userGroup =>
       if (userGroup.id != id) {
         complete(StatusCode.int2StatusCode(400))
@@ -79,7 +79,8 @@ trait UserGroupService extends UserGroupRepository with UserGroupJsonProtocol wi
     }
   }
 
-  protected def getUserGroupDeleteRoute(id: Long): Route = {
+  protected def getUserGroupDeleteRoute(id: Long)
+                                       (implicit db: Database, session: SlickSession): Route = {
     onSuccess(deleteUserGroup(id)) { response =>
       complete(
         HttpEntity(ContentTypes.`text/html(UTF-8)`,

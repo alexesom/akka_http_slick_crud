@@ -36,6 +36,7 @@ lazy val library = new {
   val slick: Seq[ModuleID] = Seq(
     "com.typesafe.slick" %% "slick" % Version.slick,
     "com.typesafe.slick" %% "slick-hikaricp" % Version.slick,
+    "com.lightbend.akka" %% "akka-stream-alpakka-slick" % "3.0.4",
     "org.postgresql" % "postgresql" % "42.3.6"
   )
 }

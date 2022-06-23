@@ -1,30 +1,44 @@
 package services
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode}
-import akka.http.scaladsl.server.Directives.{as, complete, entity, onSuccess}
+import akka.http.scaladsl.server.Directives.{as, complete, entity, onComplete, onSuccess}
 import akka.http.scaladsl.server.Route
+import akka.stream.alpakka.slick.scaladsl.SlickSession
 import models.User
 import models.jsonSupport.UserJsonProtocol
 import repositories.UserRepository
-import routes.implicits.RoutesImplicits
+import routes.implicits.ActorsImplicits
+import slick.jdbc.JdbcBackend.Database
+
+import scala.util.{Failure, Success}
 
 
-trait UserService extends UserRepository with UserJsonProtocol with RoutesImplicits {
+trait UserService extends UserRepository with UserJsonProtocol with ActorsImplicits {
 
-  def getUserInsertRoute: Route = {
+  def getUserInsertRoute(implicit db: Database, session: SlickSession): Route = {
     entity(as[User]) { user =>
-      onSuccess(insertUser(user)) { responseId =>
-        complete(
-          HttpEntity(
-            ContentTypes.`text/html(UTF-8)`,
-            s"<h3>Post request complete! User: $user, DB id: $responseId</h3>"
+      onComplete(insertUser(user)) {
+        case Success(responseId) =>
+          complete(
+            HttpEntity(
+              ContentTypes.`text/html(UTF-8)`,
+              s"<h3>Post request complete! User: $user, DB id: $responseId</h3>"
+            )
           )
-        )
+
+        case Failure(exception) =>
+          complete(
+            HttpEntity(
+              ContentTypes.`text/html(UTF-8)`,
+              s"<h3>Cannot insert user because already exists</h3>"
+            )
+          )
       }
     }
   }
 
-  def getUserPutRoute(id: Long): Route = {
+  def getUserPutRoute(id: Long)
+                     (implicit db: Database, session: SlickSession): Route = {
     entity(as[User]) { user =>
       if (user.id != id) {
         complete(StatusCode.int2StatusCode(400))
@@ -40,7 +54,8 @@ trait UserService extends UserRepository with UserJsonProtocol with RoutesImplic
     }
   }
 
-  def getUserUpdateRoute(id: Long): Route = {
+  def getUserUpdateRoute(id: Long)
+                        (implicit db: Database, session: SlickSession): Route = {
     entity(as[User]) { user =>
       if (user.id != id) {
         complete(StatusCode.int2StatusCode(400))
@@ -48,7 +63,7 @@ trait UserService extends UserRepository with UserJsonProtocol with RoutesImplic
         onSuccess(updateUser(user, id)) { response =>
           complete(HttpEntity(
             ContentTypes.`text/html(UTF-8)`,
-            s"<h3>Patch request complete! User: $user, DB id: ${response.map(_.id).headOption.getOrElse(None)}</h3>"
+            s"<h3>Patch request complete! User: $user, DB id: $response</h3>"
           )
           )
         }
@@ -56,13 +71,15 @@ trait UserService extends UserRepository with UserJsonProtocol with RoutesImplic
     }
   }
 
-  def getUserDeleteRoute(id: Long): Route = {
+  def getUserDeleteRoute(id: Long)
+                        (implicit db: Database, session: SlickSession): Route = {
     onSuccess(deleteUser(id)) { response =>
       complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h3>Delete request complete! User: $response</h3>"))
     }
   }
 
-  def getUserByIdRoute(id: Long): Route = {
+  def getUserByIdRoute(id: Long)
+                      (implicit db: Database, session: SlickSession): Route = {
     onSuccess(getUserId(id)) { resultUser =>
       complete(
         HttpEntity(
@@ -76,14 +93,11 @@ trait UserService extends UserRepository with UserJsonProtocol with RoutesImplic
     }
   }
 
-  def getUserPageRoute(page: Int, pageSize: Int): Route = {
-    onSuccess(getUserPage(page, pageSize)) { page =>
-      complete(HttpEntity(ContentTypes.`text/html(UTF-8)`,
-        page
-          .map(user => s"<h3>$user</h3>")
-          .mkString("")
-      )
-      )
-    }
+  def getUserPageRoute(page: Int, pageSize: Int)
+                      (implicit db: Database, session: SlickSession): Route = {
+    complete(
+      getUserPage(page, pageSize)
+    )
+
   }
 }

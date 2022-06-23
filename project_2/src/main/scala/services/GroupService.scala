@@ -3,14 +3,16 @@ package services
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, onSuccess}
 import akka.http.scaladsl.server.Route
+import akka.stream.alpakka.slick.scaladsl.SlickSession
 import models.Group
 import models.jsonSupport.GroupJsonProtocol
 import repositories.GroupRepository
-import routes.implicits.RoutesImplicits
+import routes.implicits.ActorsImplicits
+import slick.jdbc.JdbcBackend.Database
 
 
-trait GroupService extends GroupRepository with GroupJsonProtocol with RoutesImplicits {
-  def getGroupInsertRoute: Route = {
+trait GroupService extends GroupRepository with GroupJsonProtocol with ActorsImplicits {
+  def getGroupInsertRoute(implicit db: Database, session: SlickSession): Route = {
     entity(as[Group]) { group =>
       onSuccess(insertGroup(group)) { responseId =>
         complete(
@@ -23,7 +25,7 @@ trait GroupService extends GroupRepository with GroupJsonProtocol with RoutesImp
     }
   }
 
-  def getGroupPutRoute(id: Long): Route = {
+  def getGroupPutRoute(id: Long)(implicit db: Database, session: SlickSession): Route = {
     entity(as[Group]) { group =>
       if (group.id != id) {
         complete(StatusCode.int2StatusCode(400))
@@ -40,7 +42,7 @@ trait GroupService extends GroupRepository with GroupJsonProtocol with RoutesImp
     }
   }
 
-  def getGroupUpdateRoute(id: Long): Route = {
+  def getGroupUpdateRoute(id: Long)(implicit db: Database, session: SlickSession): Route = {
     entity(as[Group]) { group =>
       if (group.id != id) {
         complete(StatusCode.int2StatusCode(400))
@@ -48,7 +50,7 @@ trait GroupService extends GroupRepository with GroupJsonProtocol with RoutesImp
         onSuccess(updateGroup(group, id)) { response =>
           complete(HttpEntity(
             ContentTypes.`text/html(UTF-8)`,
-            s"<h3>Patch request complete! Group: $group, DB id: ${response.map(_.id).headOption.getOrElse(None)}</h3>"
+            s"<h3>Patch request complete! Group: $group, DB id: ${response}</h3>"
           )
           )
         }
@@ -56,14 +58,14 @@ trait GroupService extends GroupRepository with GroupJsonProtocol with RoutesImp
     }
   }
 
-  def getGroupDeleteRoute(id: Long): Route = {
+  def getGroupDeleteRoute(id: Long)(implicit db: Database, session: SlickSession): Route = {
 
     onSuccess(deleteGroup(id)) { response =>
       complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h3>Delete request complete! Group: $response</h3>"))
     }
   }
 
-  def getGroupByIdRoute(id: Long): Route = {
+  def getGroupByIdRoute(id: Long)(implicit db: Database, session: SlickSession): Route = {
     onSuccess(getGroupId(id)) { resultGroup =>
       complete(
         HttpEntity(
@@ -77,14 +79,9 @@ trait GroupService extends GroupRepository with GroupJsonProtocol with RoutesImp
     }
   }
 
-  def getGroupPageRoute(page: Int, pageSize: Int): Route = {
-    onSuccess(getGroupPage(page, pageSize)) { page =>
-      complete(HttpEntity(ContentTypes.`text/html(UTF-8)`,
-        page
-          .map(group => s"<h3>$group</h3>")
-          .mkString("")
-      )
-      )
-    }
+  def getGroupPageRoute(page: Int, pageSize: Int)(implicit db: Database, session: SlickSession): Route = {
+    complete(
+      getGroupPage(page, pageSize)
+    )
   }
 }

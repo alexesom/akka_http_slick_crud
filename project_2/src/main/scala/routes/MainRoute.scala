@@ -3,14 +3,13 @@ package routes
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import routes.implicits.RoutesImplicits
+import akka.stream.alpakka.slick.scaladsl.SlickSession
+import routes.implicits.ActorsImplicits
 import slick.jdbc.JdbcBackend.Database
 
-trait MainRoute extends GroupRoute with UserRoute with UserGroupRoute with RoutesImplicits {
+trait MainRoute extends GroupRoute with UserRoute with UserGroupRoute with ActorsImplicits {
 
-  override val db = Database.forConfig("database")
-
-  lazy val routes = {
+  def routes(implicit db: Database, session: SlickSession): Route = {
     concat(
       pathSingleSlash(getApiTraces),
       pathPrefix(("users" / "groups") | ("groups" / "users"))(userGroupRoute),

@@ -2,15 +2,17 @@ package routes
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.stream.alpakka.slick.scaladsl.SlickSession
 import models.jsonSupport.UserGroupJsonProtocol
-import routes.implicits.RoutesImplicits
+import routes.implicits.ActorsImplicits
 import services.UserGroupService
+import slick.jdbc.JdbcBackend.Database
 
 import scala.language.postfixOps
 
-trait UserGroupRoute extends UserGroupService with UserGroupJsonProtocol with RoutesImplicits {
+trait UserGroupRoute extends UserGroupService with UserGroupJsonProtocol with ActorsImplicits {
 
-  lazy val userGroupRoute: Route =
+  def userGroupRoute(implicit db: Database, session: SlickSession): Route =
     concat(
       getUserGroupRoute,
       postUserGroupRoute,
@@ -19,7 +21,7 @@ trait UserGroupRoute extends UserGroupService with UserGroupJsonProtocol with Ro
       deleteUserGroupRoute
     )
 
-  private def getUserGroupRoute: Route = {
+  private def getUserGroupRoute(implicit db: Database, session: SlickSession): Route = {
     get {
       concat(
         parameters("page".as[Int], "pageSize".withDefault(100)) { (page, pageSize) =>
@@ -35,25 +37,25 @@ trait UserGroupRoute extends UserGroupService with UserGroupJsonProtocol with Ro
     }
   }
 
-  private def postUserGroupRoute: Route = {
+  private def postUserGroupRoute(implicit db: Database, session: SlickSession): Route = {
     post {
       pathEndOrSingleSlash(getUserGroupInsertRoute)
     }
   }
 
-  private def putUserGroupRoute: Route = {
+  private def putUserGroupRoute(implicit db: Database, session: SlickSession): Route = {
     put {
       path(LongNumber)(getUserGroupPutRoute)
     }
   }
 
-  private def patchUserGroupRoute: Route = {
+  private def patchUserGroupRoute(implicit db: Database, session: SlickSession): Route = {
     patch {
       path(LongNumber)(getUserGroupUpdateRoute)
     }
   }
 
-  private def deleteUserGroupRoute: Route = {
+  private def deleteUserGroupRoute(implicit db: Database, session: SlickSession): Route = {
     delete {
       path(LongNumber)(getUserGroupDeleteRoute)
     }

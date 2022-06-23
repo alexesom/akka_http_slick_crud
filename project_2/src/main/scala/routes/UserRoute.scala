@@ -2,16 +2,18 @@ package routes
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.stream.alpakka.slick.scaladsl.SlickSession
 import models.jsonSupport.UserJsonProtocol
-import routes.implicits.RoutesImplicits
+import routes.implicits.ActorsImplicits
 import services.UserService
+import slick.jdbc.JdbcBackend.Database
 
 import scala.language.postfixOps
 
 
-trait UserRoute extends UserService with UserJsonProtocol with RoutesImplicits {
+trait UserRoute extends UserService with UserJsonProtocol with ActorsImplicits {
 
-  lazy val usersRoute: Route =
+  def usersRoute(implicit db: Database, session: SlickSession): Route =
     concat(
       getUsersRoute,
       postUsersRoute,
@@ -20,7 +22,7 @@ trait UserRoute extends UserService with UserJsonProtocol with RoutesImplicits {
       deleteUsersRoute
     )
 
-  private def getUsersRoute: Route = {
+  private def getUsersRoute(implicit db: Database, session: SlickSession): Route = {
     get {
       concat(
         parameters("page".as[Int], "pageSize".withDefault(100)) { (page, pageSize) =>
@@ -36,25 +38,25 @@ trait UserRoute extends UserService with UserJsonProtocol with RoutesImplicits {
     }
   }
 
-  private def postUsersRoute: Route = {
+  private def postUsersRoute(implicit db: Database, session: SlickSession): Route = {
     post {
       pathEndOrSingleSlash(getUserInsertRoute)
     }
   }
 
-  private def putUsersRoute: Route = {
+  private def putUsersRoute(implicit db: Database, session: SlickSession): Route = {
     put {
       path(LongNumber)(getUserPutRoute)
     }
   }
 
-  private def patchUsersRoute: Route = {
+  private def patchUsersRoute(implicit db: Database, session: SlickSession): Route = {
     patch {
       path(LongNumber)(getUserUpdateRoute)
     }
   }
 
-  private def deleteUsersRoute: Route = {
+  private def deleteUsersRoute(implicit db: Database, session: SlickSession): Route = {
     delete {
       path(LongNumber)(getUserDeleteRoute)
     }

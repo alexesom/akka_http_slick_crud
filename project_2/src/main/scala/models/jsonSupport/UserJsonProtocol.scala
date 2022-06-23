@@ -1,12 +1,13 @@
 package models.jsonSupport
 
+import akka.http.scaladsl.common.{EntityStreamingSupport, JsonEntityStreamingSupport}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import models.User
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, RootJsonFormat}
 
 import java.time.LocalDate
 
-trait BaseUserJsonProtocol extends DefaultJsonProtocol {
+trait BaseUserJsonProtocol extends DefaultJsonProtocol with BaseJsonStreamingProtocol {
   implicit val localDateFormat: JsonFormat[LocalDate] = new JsonFormat[LocalDate] {
     override def write(obj: LocalDate): JsValue = JsString(obj.toString)
 
